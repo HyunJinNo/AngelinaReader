@@ -1,6 +1,15 @@
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
+import os
+import local_config
+import model.infer_retinanet as infer_retinanet
 
+
+model_weights = 'model.t7'
+recognizer = infer_retinanet.BrailleInference(
+    params_fn=os.path.join(local_config.data_path, 'weights', 'param.txt'),
+    model_weights_fn=os.path.join(local_config.data_path, 'weights', model_weights),
+    create_script=None)
 
 app = Flask(__name__)
 
@@ -10,10 +19,14 @@ def home():
     return "Server"
 
 
-@app.route("/loadModel", method=["GET"])
+@app.route("/loadModel", method=["POST"])
 def loadModel():
-    if request.method == "GET":
-        return "LoadModel"
+    if request.method == "POST":
+        global recognizer
+        recognizer = infer_retinanet.BrailleInference(
+            params_fn=os.path.join(local_config.data_path, 'weights', 'param.txt'),
+            model_weights_fn=os.path.join(local_config.data_path, 'weights', model_weights),
+            create_script=None)
 
 
 @app.route("/inference", methods=["POST"])

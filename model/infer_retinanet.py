@@ -177,7 +177,7 @@ class BrailleInference:
                  verbose=1, inference_width=inference_width, device=device):
         self.verbose = verbose
         if not torch.cuda.is_available() and device != 'cpu':
-            print('CUDA not availabel. CPU is used')
+            print('CUDA not available. CPU is used')
             device = 'cpu'
 
         params = AttrDict.load(params_fn, verbose=verbose)
@@ -435,8 +435,6 @@ class BrailleInference:
             'scores' + suff: scores,
         }
 
-
-
     def to_dict(self, img, lines, draw_refined = DRAW_NONE):
         '''
         generates dict for LabelMe json format
@@ -485,8 +483,7 @@ class BrailleInference:
                 f.write(s)
                 f.write('\n')
         return str(marked_image_path), str(recognized_text_path), str(recognized_braille_path), result_dict['text' + suff]
-
-
+    
     def run_and_save(self, img, results_dir, target_stem, lang, extra_info, draw_refined,
                      remove_labeled_from_filename, find_orientation, align_results, process_2_sides, repeat_on_aligned,
                      save_development_info=True):
@@ -528,6 +525,7 @@ class BrailleInference:
                     info.update(extra_info)
                 json.dump(info, f, sort_keys=False, indent=4)
 
+        
         results = [self.save_results(result_dict, False, results_dir, target_stem, save_development_info)]
         if process_2_sides:
             results += [self.save_results(result_dict, True, results_dir, target_stem, save_development_info)]
@@ -603,6 +601,82 @@ class BrailleInference:
                         continue
                     result_list += ith_result
         return result_list
+
+    
+    def inference(self, img, lang, draw_refined, find_orientation, process_2_sides, align_results, repeat_on_aligned=True, gt_rects=[]):
+        """
+        :param img: can be 1) PIL.Image 2) filename to image (.jpg etc.) or .pdf file
+        """
+        if not isinstance(img, PIL.Image.Image):
+            try:
+                if Path(img).suffix=='.pdf':
+                    img = self.load_pdf(img)
+                else:
+                    img = PIL.Image.open(img)
+            except Exception:
+                return None
+            
+        results = self.temp(img, lang, draw_refined, find_orientation,
+                                     process_2_sides=process_2_sides, align=align_results, draw=True, gt_rects=gt_rects)
+        
+        for s in results:
+            print(s)
+    
+    
+    def temp(self, img, lang, draw_refined, find_orientation, process_2_sides, align, draw, gt_rects=[]):
+        np_img = np.asarray(img)
+        if (len(np_img.shape) > 2 and np_img.shape[2] < 3):  # grayscale -> reduce dim
+            np_img = np_img[:,:,0]
+        aug_img, aug_gt_rects = self.preprocessor.preprocess_and_augment(np_img, gt_rects)
+        aug_img = data.unify_shape(aug_img)
+        input_tensor = self.preprocessor.to_normalized_tensor(aug_img, device=self.impl.device)
+        input_tensor_rotated = torch.tensor(0).to(self.impl.device)
+
+        aug_img_rot = None
+        if find_orientation:
+            np_img_rot = np.rot90(np_img, 1, (0,1))
+            aug_img_rot = self.preprocessor.preprocess_and_augment(np_img_rot)[0]
+            aug_img_rot = data.unify_shape(aug_img_rot)
+            input_tensor_rotated = self.preprocessor.to_normalized_tensor(aug_img_rot, device=self.impl.device)
+
+        with torch.no_grad():
+            boxes, labels, scores, best_idx, err_score, boxes2, labels2, scores2 = self.impl(
+                input_tensor, input_tensor_rotated, find_orientation=find_orientation, process_2_sides=process_2_sides)
+        
+        boxes = boxes.tolist()
+        labels = labels.tolist()
+        scores = scores.tolist()
+        lines = postprocess.boxes_to_lines(boxes, labels, lang = lang)
+        self.refine_lines(lines)
+
+        aug_img = PIL.Image.fromarray(aug_img if best_idx < OrientationAttempts.ROT90 else aug_img_rot)
+        
+        if align and not process_2_sides:
+            hom = postprocess.find_transformation(lines, (aug_img.width, aug_img.height))
+            if hom is not None:
+                aug_img = postprocess.transform_image(aug_img, hom)
+                boxes = postprocess.transform_rects(boxes, hom)
+                lines = postprocess.boxes_to_lines(boxes, labels, lang=lang)
+                self.refine_lines(lines)
+                aug_gt_rects = postprocess.transform_rects(aug_gt_rects, hom)
+        else:
+            hom = None
+
+        return self.temp2(lines, draw_refined)
+    
+    
+    def temp2(self, lines, draw_refined):
+        out_braille = []
+        for ln in lines:
+            if ln.has_space_before:
+                out_braille.append('')
+            s_brl = ''
+            for ch in ln.chars:
+                if ch.char.startswith('~') and not (draw_refined & self.DRAW_FULL_CHARS):
+                    ch.char = '~?~'
+                s_brl += lt.int_to_unicode(0) * ch.spaces_before + lt.int_to_unicode(ch.label)
+            out_braille.append(s_brl)
+        return out_braille
 
 
 if __name__ == '__main__':
