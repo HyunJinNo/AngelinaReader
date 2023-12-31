@@ -1,10 +1,11 @@
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from BrailleToKor import BrailleToKor
-import os
 import local_config
 import model.infer_retinanet as infer_retinanet
-
 
 model_weights = 'model.t7'
 recognizer = infer_retinanet.BrailleInference(
@@ -21,7 +22,7 @@ def home():
     return "Server"
 
 
-@app.route("/loadModel", method=["POST"])
+@app.route("/loadModel", methods=["POST"])
 def loadModel():
     if request.method == "POST":
         global recognizer, translator
@@ -30,6 +31,7 @@ def loadModel():
             model_weights_fn=os.path.join(local_config.data_path, 'weights', model_weights),
             create_script=None)
         translator = BrailleToKor()
+        return "LoadModel"
 
 
 @app.route("/inference", methods=["POST"])
@@ -38,19 +40,26 @@ def inference():
         global recognizer, translator
         file = request.files["file"]
         filename = secure_filename(file.filename)
-        braille_texts = recognizer.inference(filename, lang="EN",
+        file.save("./" + filename)
+        path = os.getcwd() + "\\" + filename
+        print(path)
+        braille_texts = recognizer.inference(filename, lang="RU",
                                       draw_refined=recognizer.DRAW_NONE,
                                       find_orientation=True,
                                       process_2_sides=False,
                                       align_results=True,
                                       repeat_on_aligned=False)
-        src_text = "\n".join(braille_texts)
         
         translated_texts = []
-        for line in braille_texts:
-            translated_texts.append(translator.translation(line))
-         
-        translated_text = "\n".join(translated_texts)
+        if braille_texts is None:
+            src_text = ""
+            translated_text = ""
+        else:
+            src_text = "\n".join(braille_texts)
+            for line in braille_texts:
+                translated_texts.append(translator.translation(line)) 
+            translated_text = "\n".join(translated_texts)
+            
         return jsonify({"srcText": src_text, "translatedText": translated_text})
 
 

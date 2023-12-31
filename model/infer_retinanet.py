@@ -616,11 +616,12 @@ class BrailleInference:
             except Exception:
                 return None
             
-        return self.get_braille_texts(img, lang, draw_refined, find_orientation,
-                                      process_2_sides=process_2_sides,
-                                      align=align_results,
-                                      draw=True,
-                                      gt_rects=gt_rects)
+        result = self.get_braille_texts(img, lang, draw_refined, find_orientation,
+                                        process_2_sides=process_2_sides,
+                                        align=align_results,
+                                        draw=True,
+                                        gt_rects=gt_rects)
+        return result
     
     
     def get_braille_texts(self, img, lang, draw_refined, find_orientation, process_2_sides, align, draw, gt_rects=[]):
