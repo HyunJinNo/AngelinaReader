@@ -4,4 +4,5 @@
 web_app/static/data/
 venv/
 Logs/
-/model/model.t7
+/weights/model.t7
+/picture.jpg

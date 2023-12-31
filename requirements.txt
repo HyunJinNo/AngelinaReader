@@ -13,3 +13,4 @@ scikit-build
 albumentations==0.4.5
 PyMuPDF>=1.17.5
 opencv>=4.6.0
+imgaug>=0.4.0

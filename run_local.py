@@ -5,6 +5,7 @@ Local application for Angelina Braille Reader inference
 """
 import argparse
 import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from pathlib import Path
 
 import local_config
