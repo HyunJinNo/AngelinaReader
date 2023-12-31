@@ -616,14 +616,14 @@ class BrailleInference:
             except Exception:
                 return None
             
-        results = self.temp(img, lang, draw_refined, find_orientation,
-                                     process_2_sides=process_2_sides, align=align_results, draw=True, gt_rects=gt_rects)
-        
-        for s in results:
-            print(s)
+        return self.get_braille_texts(img, lang, draw_refined, find_orientation,
+                                      process_2_sides=process_2_sides,
+                                      align=align_results,
+                                      draw=True,
+                                      gt_rects=gt_rects)
     
     
-    def temp(self, img, lang, draw_refined, find_orientation, process_2_sides, align, draw, gt_rects=[]):
+    def get_braille_texts(self, img, lang, draw_refined, find_orientation, process_2_sides, align, draw, gt_rects=[]):
         np_img = np.asarray(img)
         if (len(np_img.shape) > 2 and np_img.shape[2] < 3):  # grayscale -> reduce dim
             np_img = np_img[:,:,0]
@@ -645,7 +645,6 @@ class BrailleInference:
         
         boxes = boxes.tolist()
         labels = labels.tolist()
-        scores = scores.tolist()
         lines = postprocess.boxes_to_lines(boxes, labels, lang = lang)
         self.refine_lines(lines)
 
@@ -662,22 +661,16 @@ class BrailleInference:
         else:
             hom = None
 
-        return self.temp2(lines, draw_refined)
-    
-    
-    def temp2(self, lines, draw_refined):
-        out_braille = []
+        result = []
         for ln in lines:
             if ln.has_space_before:
-                out_braille.append('')
+                result.append('')
             s_brl = ''
             for ch in ln.chars:
-                if ch.char.startswith('~') and not (draw_refined & self.DRAW_FULL_CHARS):
-                    ch.char = '~?~'
                 s_brl += lt.int_to_unicode(0) * ch.spaces_before + lt.int_to_unicode(ch.label)
-            out_braille.append(s_brl)
-        return out_braille
-
+            result.append(s_brl)
+        return result
+    
 
 if __name__ == '__main__':
 
