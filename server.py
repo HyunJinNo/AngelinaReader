@@ -42,14 +42,12 @@ def inference():
         filename = secure_filename(file.filename)
         file.save("./" + filename)
         path = os.getcwd() + "\\" + filename
-        print(path)
-        braille_texts = recognizer.inference(filename, lang="RU",
+        braille_texts = recognizer.inference(path, lang="EN",
                                       draw_refined=recognizer.DRAW_NONE,
-                                      find_orientation=True,
+                                      find_orientation=False,
                                       process_2_sides=False,
                                       align_results=True,
                                       repeat_on_aligned=False)
-        
         translated_texts = []
         if braille_texts is None:
             src_text = ""
@@ -59,7 +57,7 @@ def inference():
             for line in braille_texts:
                 translated_texts.append(translator.translation(line)) 
             translated_text = "\n".join(translated_texts)
-            
+        
         return jsonify({"srcText": src_text, "translatedText": translated_text})
 
 

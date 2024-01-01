@@ -56,15 +56,23 @@ else:
                                                repeat_on_aligned=False,
                                                save_development_info=False)
     elif Path(args.input).suffix in ('.jpg', '.jpe', '.jpeg', '.png', '.gif', '.svg', '.bmp'):
-        recognizer.run_and_save(args.input, results_dir, target_stem=None,
-                                               lang=args.lang, extra_info=None,
-                                               draw_refined=recognizer.DRAW_NONE,
-                                               remove_labeled_from_filename=False,
-                                               find_orientation=args.orient,
-                                               align_results=True,
-                                               process_2_sides=args.two,
-                                               repeat_on_aligned=False,
-                                               save_development_info=False)
+        braille_texts = recognizer.inference(args.input, lang="EN",
+                                      draw_refined=recognizer.DRAW_NONE,
+                                      find_orientation=True,
+                                      process_2_sides=False,
+                                      align_results=True,
+                                      repeat_on_aligned=False)
+        for line in braille_texts:
+            print(line)
+        #recognizer.run_and_save(args.input, results_dir, target_stem=None,
+        #                                       lang=args.lang, extra_info=None,
+        #                                       draw_refined=recognizer.DRAW_NONE,
+        #                                       remove_labeled_from_filename=False,
+        #                                       find_orientation=args.orient,
+        #                                       align_results=True,
+        #                                       process_2_sides=args.two,
+        #                                       repeat_on_aligned=False,
+        #                                       save_development_info=False)
     else:
         print('Incorrect file extention: ' + Path(args.input).suffix + ' . Only images, .pdf and .zip files allowed')
         exit()

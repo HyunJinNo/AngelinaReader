@@ -616,15 +616,14 @@ class BrailleInference:
             except Exception:
                 return None
             
-        result = self.get_braille_texts(img, lang, draw_refined, find_orientation,
+        result = self.get_braille_texts(img, lang, find_orientation,
                                         process_2_sides=process_2_sides,
                                         align=align_results,
-                                        draw=True,
                                         gt_rects=gt_rects)
         return result
     
     
-    def get_braille_texts(self, img, lang, draw_refined, find_orientation, process_2_sides, align, draw, gt_rects=[]):
+    def get_braille_texts(self, img, lang, find_orientation, process_2_sides, align, gt_rects=[]):
         np_img = np.asarray(img)
         if (len(np_img.shape) > 2 and np_img.shape[2] < 3):  # grayscale -> reduce dim
             np_img = np_img[:,:,0]
